@@ -5,6 +5,9 @@ const taskInput = document.querySelector('#task-input');
 const taskList = document.querySelector('#task-list');
 const emptyState = document.querySelector('#empty-state');
 const remainingCount = document.querySelector('#remaining-count');
+const filterButtons = document.querySelectorAll('.filter-button');
+const clearCompletedButton = document.querySelector('#clear-completed');
+const emptyStateMessage = emptyState.querySelector('p');
 
 const STORAGE_KEY = 'focuslist-tasks';
 
@@ -36,6 +39,7 @@ function saveTasks() {
 }
 
 let tasks = loadTasks();
+let currentFilter = 'all';
 
 /**
  * Add a new task to the application.
@@ -60,12 +64,29 @@ function findTask(taskId) {
 }
 
 /**
+ * Return tasks that match the currently selected filter.
+ */
+function getVisibleTasks() {
+    if (currentFilter === 'active') {
+        return tasks.filter((task) => !task.completed);
+    }
+
+    if (currentFilter === 'completed') {
+        return tasks.filter((task) => task.completed);
+    }
+
+    return tasks;
+}
+
+/**
  * Display all tasks currently stored in the array.
  */
 function renderTasks() {
     taskList.replaceChildren();
 
-    tasks.forEach((task) => {
+    const visibleTasks = getVisibleTasks();
+
+    visibleTasks.forEach((task) => {
         const listItem = document.createElement('li');
         listItem.className = 'task-item';
         listItem.dataset.taskId = task.id;
@@ -74,7 +95,7 @@ function renderTasks() {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'task-checkbox';
-        checkbox.checked = task.completed;
+        checkbox.checked = Boolean(task.completed);
         checkbox.setAttribute(
             'aria-label',
             `Mark ${task.title} as ${task.completed ? 'active' : 'completed'}`
@@ -107,9 +128,17 @@ function renderTasks() {
     });
 
     const activeTasks = tasks.filter((task) => !task.completed);
+    const completedTasks = tasks.filter((task) => task.completed);
 
-    emptyState.hidden = tasks.length > 0;
     remainingCount.textContent = activeTasks.length;
+    clearCompletedButton.hidden = completedTasks.length === 0;
+    emptyState.hidden = visibleTasks.length > 0;
+
+    if (tasks.length === 0) {
+        emptyStateMessage.textContent = 'No tasks yet. Add your first task above.';
+    } else {
+        emptyStateMessage.textContent = `No ${currentFilter} tasks to display.`;
+    }
 }
 
 /**
@@ -134,17 +163,24 @@ taskForm.addEventListener('submit', (event) => {
  * Handle changes to task checkboxes.
  */
 taskList.addEventListener('change', (event) => {
-    if (!event.target.matches('.task-checkbox')) {
+    const checkbox = event.target.closest('.task-checkbox');
+
+    if (!checkbox) {
         return;
     }
 
-    const taskItem = event.target.closest('.task-item');
+    const taskItem = checkbox.closest('.task-item');
     const task = findTask(taskItem.dataset.taskId);
 
-    if (task) {
-        task.completed = event.target.checked;
-        renderTasks();
+    if (!task) {
+        return;
     }
+
+    task.completed = checkbox.checked;
+
+    // Save the changed completion status before rendering again.
+    saveTasks();
+    renderTasks();
 });
 
 /**
@@ -187,6 +223,31 @@ taskList.addEventListener('click', (event) => {
         saveTasks();
         renderTasks();
     }
+});
+
+/**
+ * Change the visible task filter.
+ */
+filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+        currentFilter = button.dataset.filter;
+
+        filterButtons.forEach((currentButton) => {
+            currentButton.classList.remove('active');
+        });
+
+        button.classList.add('active');
+        renderTasks();
+    });
+});
+
+/**
+ * Remove every completed task.
+ */
+clearCompletedButton.addEventListener('click', () => {
+    tasks = tasks.filter((task) => !task.completed);
+    saveTasks();
+    renderTasks();
 });
 
 renderTasks();
