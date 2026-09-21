@@ -1,5 +1,6 @@
 import '../style.css';
 
+const searchInput = document.querySelector('#search-input');
 const taskForm = document.querySelector('#task-form');
 const taskInput = document.querySelector('#task-input');
 const taskList = document.querySelector('#task-list');
@@ -40,6 +41,7 @@ function saveTasks() {
 
 let tasks = loadTasks();
 let currentFilter = 'all';
+let searchTerm = '';
 
 /**
  * Add a new task to the application.
@@ -64,18 +66,28 @@ function findTask(taskId) {
 }
 
 /**
- * Return tasks that match the currently selected filter.
+ * Return tasks that match both the selected status and search term.
  */
 function getVisibleTasks() {
+    let visibleTasks = tasks;
+
     if (currentFilter === 'active') {
-        return tasks.filter((task) => !task.completed);
+        visibleTasks = visibleTasks.filter((task) => !task.completed);
     }
 
     if (currentFilter === 'completed') {
-        return tasks.filter((task) => task.completed);
+        visibleTasks = visibleTasks.filter((task) => task.completed);
     }
 
-    return tasks;
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    if (normalizedSearch !== '') {
+        visibleTasks = visibleTasks.filter((task) =>
+            task.title.toLowerCase().includes(normalizedSearch)
+        );
+    }
+
+    return visibleTasks;
 }
 
 /**
@@ -136,8 +148,12 @@ function renderTasks() {
 
     if (tasks.length === 0) {
         emptyStateMessage.textContent = 'No tasks yet. Add your first task above.';
+    } else if (searchTerm.trim() !== '') {
+        emptyStateMessage.textContent =
+            `No tasks match "${searchTerm.trim()}".`;
     } else {
-        emptyStateMessage.textContent = `No ${currentFilter} tasks to display.`;
+        emptyStateMessage.textContent =
+            `No ${currentFilter} tasks to display.`;
     }
 }
 
@@ -247,6 +263,14 @@ filterButtons.forEach((button) => {
 clearCompletedButton.addEventListener('click', () => {
     tasks = tasks.filter((task) => !task.completed);
     saveTasks();
+    renderTasks();
+});
+
+/**
+ * Filter tasks while the user types in the search field.
+ */
+searchInput.addEventListener('input', () => {
+    searchTerm = searchInput.value;
     renderTasks();
 });
 
