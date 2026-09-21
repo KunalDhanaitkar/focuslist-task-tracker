@@ -156,3 +156,61 @@ h1 {
         min-height: 46px;
     }
 }
+
+.task-item {
+    display: flex;
+    min-height: 58px;
+    padding: 14px 10px;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.task-title {
+    overflow-wrap: anywhere;
+    font-weight: 600;
+}
+
+.task-checkbox {
+    width: 20px;
+    height: 20px;
+    margin: 0 14px 0 0;
+    accent-color: #4f46e5;
+    cursor: pointer;
+}
+
+.task-item.completed .task-title {
+    color: #9ca3af;
+    text-decoration: line-through;
+}
+
+.task-actions {
+    display: flex;
+    margin-left: auto;
+    gap: 6px;
+}
+
+.edit-button,
+.delete-button {
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.edit-button {
+    color: #3730a3;
+    background: #eef2ff;
+}
+
+.delete-button {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.edit-button:hover {
+    background: #e0e7ff;
+}
+
+.delete-button:hover {
+    background: #fee2e2;
+}
