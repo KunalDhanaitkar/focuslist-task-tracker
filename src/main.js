@@ -6,7 +6,36 @@ const taskList = document.querySelector('#task-list');
 const emptyState = document.querySelector('#empty-state');
 const remainingCount = document.querySelector('#remaining-count');
 
-let tasks = [];
+const STORAGE_KEY = 'focuslist-tasks';
+
+/**
+ * Load previously saved tasks from the browser.
+ */
+function loadTasks() {
+    try {
+        const savedTasks = localStorage.getItem(STORAGE_KEY);
+
+        if (savedTasks === null) {
+            return [];
+        }
+
+        const parsedTasks = JSON.parse(savedTasks);
+
+        return Array.isArray(parsedTasks) ? parsedTasks : [];
+    } catch (error) {
+        console.error('Unable to load saved tasks:', error);
+        return [];
+    }
+}
+
+/**
+ * Save the current task array in the browser.
+ */
+function saveTasks() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+let tasks = loadTasks();
 
 /**
  * Add a new task to the application.
@@ -19,6 +48,7 @@ function addTask(title) {
     };
 
     tasks.push(newTask);
+    saveTasks();
     renderTasks();
 }
 
@@ -147,12 +177,14 @@ taskList.addEventListener('click', (event) => {
 
         if (cleanTitle !== '') {
             task.title = cleanTitle;
+            saveTasks();
             renderTasks();
         }
     }
 
     if (actionButton.dataset.action === 'delete') {
-        tasks = tasks.filter((currentTask) => currentTask.id !== taskId);
+        tasks = tasks.filter((currentTask) => currentTask.id !== taskId);  
+        saveTasks();
         renderTasks();
     }
 });
