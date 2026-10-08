@@ -35,19 +35,28 @@
                         placeholder="What needs to be done?"
                         required
                     >
-
                     <button type="submit">Add task</button>
                 </div>
 
-                <div class="priority-field">
-                    <label for="priority-input">Priority</label>
-                    <select id="priority-input" name="priority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
+                <div class="task-options">
+                    <div class="option-field">
+                        <label for="priority-input">Priority</label>
+                        <select id="priority-input" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+
+                    <div class="option-field">
+                        <label for="due-date-input">Due date (optional)</label>
+                        <input
+                            id="due-date-input"
+                            name="dueDate"
+                            type="date"
+                        >
+                    </div>
                 </div>
-                
             </form>
         </section>
 
@@ -56,23 +65,26 @@
                 <h2>Your tasks</h2>
 
                 <div class="filters" aria-label="Filter tasks">
-                    <button type="button" class="filter-button active" data-filter="all">
-                        All
-                    </button>
-
-                    <button type="button" class="filter-button" data-filter="active">
-                        Active
-                    </button>
-
-                    <button type="button" class="filter-button" data-filter="completed">
-                        Completed
-                    </button>
+                    <button
+                        type="button"
+                        class="filter-button active"
+                        data-filter="all"
+                    >All</button>
+                    <button
+                        type="button"
+                        class="filter-button"
+                        data-filter="active"
+                    >Active</button>
+                    <button
+                        type="button"
+                        class="filter-button"
+                        data-filter="completed"
+                    >Completed</button>
                 </div>
             </div>
 
             <div class="search-container">
                 <label for="search-input">Search tasks</label>
-
                 <input
                     id="search-input"
                     type="search"
@@ -80,7 +92,7 @@
                     autocomplete="off"
                 >
             </div>
-            
+
             <ul id="task-list" class="task-list"></ul>
 
             <div id="empty-state" class="empty-state">

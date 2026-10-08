@@ -4,18 +4,19 @@ const searchInput = document.querySelector('#search-input');
 const taskForm = document.querySelector('#task-form');
 const taskInput = document.querySelector('#task-input');
 const priorityInput = document.querySelector('#priority-input');
-const PRIORITIES = ['low', 'medium', 'high'];
+const dueDateInput = document.querySelector('#due-date-input');
 const taskList = document.querySelector('#task-list');
 const emptyState = document.querySelector('#empty-state');
+const emptyStateMessage = emptyState.querySelector('p');
 const remainingCount = document.querySelector('#remaining-count');
 const filterButtons = document.querySelectorAll('.filter-button');
 const clearCompletedButton = document.querySelector('#clear-completed');
-const emptyStateMessage = emptyState.querySelector('p');
 
 const STORAGE_KEY = 'focuslist-tasks';
+const PRIORITIES = ['low', 'medium', 'high'];
 
 /**
- * Load previously saved tasks from the browser.
+ * Read saved tasks while supporting tasks created before these features.
  */
 function loadTasks() {
     try {
@@ -31,65 +32,95 @@ function loadTasks() {
             return [];
         }
 
-        // Tasks saved before priority support default to Medium.
         return parsedTasks.map((task) => ({
             ...task,
             priority: PRIORITIES.includes(task.priority)
                 ? task.priority
-                : 'medium'
+                : 'medium',
+            dueDate: task.dueDate || ''
         }));
-
     } catch (error) {
         console.error('Unable to load saved tasks:', error);
         return [];
     }
 }
 
-/**
- * Save the current task array in the browser.
- */
-function saveTasks() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
-
 let tasks = loadTasks();
 let currentFilter = 'all';
 let searchTerm = '';
 
-/**
- * Add a new task to the application.
- */
-function addTask(title, priority) {
-    const newTask = {
-        id: crypto.randomUUID(),
-        title: title,
-        completed: false,
-        priority: PRIORITIES.includes(priority) ? priority : 'medium'
-    };
+function saveTasks() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
 
-    tasks.push(newTask);
+/**
+ * Use the user's local calendar date rather than a UTC date.
+ */
+function getToday() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function isOverdue(task) {
+    return Boolean(
+        task.dueDate &&
+        !task.completed &&
+        task.dueDate < getToday()
+    );
+}
+
+function getDueDateMessage(task) {
+    if (!task.dueDate) {
+        return 'No due date';
+    }
+
+    // Construct a local date to avoid shifting dates across time zones.
+    const [year, month, day] = task.dueDate.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const formattedDate = date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+
+    if (isOverdue(task)) {
+        return `Overdue · ${formattedDate}`;
+    }
+
+    if (!task.completed && task.dueDate === getToday()) {
+        return 'Due today';
+    }
+
+    return `Due ${formattedDate}`;
+}
+
+function addTask(title, priority, dueDate) {
+    tasks.push({
+        id: crypto.randomUUID(),
+        title,
+        completed: false,
+        priority: PRIORITIES.includes(priority) ? priority : 'medium',
+        dueDate
+    });
+
     saveTasks();
     renderTasks();
 }
 
-/**
- * Find a task by its unique ID.
- */
 function findTask(taskId) {
     return tasks.find((task) => task.id === taskId);
 }
 
-/**
- * Return tasks that match both the selected status and search term.
- */
 function getVisibleTasks() {
     let visibleTasks = tasks;
 
     if (currentFilter === 'active') {
         visibleTasks = visibleTasks.filter((task) => !task.completed);
-    }
-
-    if (currentFilter === 'completed') {
+    } else if (currentFilter === 'completed') {
         visibleTasks = visibleTasks.filter((task) => task.completed);
     }
 
@@ -104,9 +135,6 @@ function getVisibleTasks() {
     return visibleTasks;
 }
 
-/**
- * Display all tasks currently stored in the array.
- */
 function renderTasks() {
     taskList.replaceChildren();
 
@@ -117,6 +145,7 @@ function renderTasks() {
         listItem.className = 'task-item';
         listItem.dataset.taskId = task.id;
         listItem.classList.toggle('completed', task.completed);
+        listItem.classList.toggle('overdue', isOverdue(task));
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -127,9 +156,47 @@ function renderTasks() {
             `Mark ${task.title} as ${task.completed ? 'active' : 'completed'}`
         );
 
+        const content = document.createElement('div');
+        content.className = 'task-content';
+
         const taskTitle = document.createElement('span');
         taskTitle.className = 'task-title';
         taskTitle.textContent = task.title;
+
+        const dueMessage = document.createElement('span');
+        dueMessage.className = 'due-message';
+        dueMessage.textContent = getDueDateMessage(task);
+
+        content.append(taskTitle, dueMessage);
+
+        const controls = document.createElement('div');
+        controls.className = 'task-controls';
+
+        const prioritySelect = document.createElement('select');
+        prioritySelect.className =
+            `task-priority priority-${task.priority}`;
+        prioritySelect.setAttribute(
+            'aria-label',
+            `Priority for ${task.title}`
+        );
+
+        PRIORITIES.forEach((priority) => {
+            const option = document.createElement('option');
+            option.value = priority;
+            option.textContent =
+                priority.charAt(0).toUpperCase() + priority.slice(1);
+            prioritySelect.append(option);
+        });
+
+        prioritySelect.value = task.priority;
+
+        const dateInput = document.createElement('input');
+        dateInput.type = 'date';
+        dateInput.className = 'task-due-date';
+        dateInput.value = task.dueDate;
+        dateInput.setAttribute('aria-label', `Due date for ${task.title}`);
+
+        controls.append(prioritySelect, dateInput);
 
         const actions = document.createElement('div');
         actions.className = 'task-actions';
@@ -147,38 +214,23 @@ function renderTasks() {
         deleteButton.dataset.action = 'delete';
         deleteButton.textContent = 'Delete';
         deleteButton.setAttribute('aria-label', `Delete ${task.title}`);
-        
-        const prioritySelect = document.createElement('select');
-        prioritySelect.className = `task-priority priority-${task.priority}`;
-        prioritySelect.setAttribute(
-            'aria-label',
-            `Priority for ${task.title}`
-        );
-
-        PRIORITIES.forEach((priority) => {
-            const option = document.createElement('option');
-            option.value = priority;
-            option.textContent =
-                priority.charAt(0).toUpperCase() + priority.slice(1);
-            prioritySelect.append(option);
-        });
-
-        prioritySelect.value = task.priority;
 
         actions.append(editButton, deleteButton);
-        listItem.append(checkbox, taskTitle, prioritySelect, actions);
+        listItem.append(checkbox, content, controls, actions);
         taskList.append(listItem);
     });
 
-    const activeTasks = tasks.filter((task) => !task.completed);
-    const completedTasks = tasks.filter((task) => task.completed);
+    remainingCount.textContent =
+        tasks.filter((task) => !task.completed).length;
 
-    remainingCount.textContent = activeTasks.length;
-    clearCompletedButton.hidden = completedTasks.length === 0;
+    clearCompletedButton.hidden =
+        !tasks.some((task) => task.completed);
+
     emptyState.hidden = visibleTasks.length > 0;
 
     if (tasks.length === 0) {
-        emptyStateMessage.textContent = 'No tasks yet. Add your first task above.';
+        emptyStateMessage.textContent =
+            'No tasks yet. Add your first task above.';
     } else if (searchTerm.trim() !== '') {
         emptyStateMessage.textContent =
             `No tasks match "${searchTerm.trim()}".`;
@@ -188,9 +240,6 @@ function renderTasks() {
     }
 }
 
-/**
- * Handle the add-task form.
- */
 taskForm.addEventListener('submit', (event) => {
     event.preventDefault();
 
@@ -200,17 +249,13 @@ taskForm.addEventListener('submit', (event) => {
         return;
     }
 
-    addTask(title, priorityInput.value);
-
+    addTask(title, priorityInput.value, dueDateInput.value);
     taskForm.reset();
     taskInput.focus();
 });
 
 /**
- * Handle changes to task checkboxes.
- */
-/**
- * Save changes to task completion or priority.
+ * Update completion, priority, or due date using event delegation.
  */
 taskList.addEventListener('change', (event) => {
     const control = event.target;
@@ -228,29 +273,27 @@ taskList.addEventListener('change', (event) => {
 
     if (control.matches('.task-checkbox')) {
         task.completed = control.checked;
+        saveTasks();
+        renderTasks();
     } else if (control.matches('.task-priority')) {
         if (!PRIORITIES.includes(control.value)) {
             return;
         }
 
         task.priority = control.value;
-    } else {
-        return;
-    }
-
-    saveTasks();
-
-    // Keep focus on the priority dropdown when changing its value.
-    if (control.matches('.task-priority')) {
+        saveTasks();
         control.className = `task-priority priority-${task.priority}`;
-    } else {
-        renderTasks();
+    } else if (control.matches('.task-due-date')) {
+        task.dueDate = control.value;
+        saveTasks();
+
+        // Update the message without interrupting the date control.
+        taskItem.classList.toggle('overdue', isOverdue(task));
+        taskItem.querySelector('.due-message').textContent =
+            getDueDateMessage(task);
     }
 });
 
-/**
- * Handle Edit and Delete buttons using event delegation.
- */
 taskList.addEventListener('click', (event) => {
     const actionButton = event.target.closest('button[data-action]');
 
@@ -269,58 +312,75 @@ taskList.addEventListener('click', (event) => {
     if (actionButton.dataset.action === 'edit') {
         const updatedTitle = window.prompt('Edit the task:', task.title);
 
-        // Cancel leaves the task unchanged.
         if (updatedTitle === null) {
             return;
         }
 
         const cleanTitle = updatedTitle.trim();
 
-        if (cleanTitle !== '') {
-            task.title = cleanTitle;
-            saveTasks();
-            renderTasks();
+        if (cleanTitle === '') {
+            return;
         }
+
+        if (cleanTitle.length > 120) {
+            window.alert('Task descriptions must be 120 characters or fewer.');
+            return;
+        }
+
+        task.title = cleanTitle;
+    } else if (actionButton.dataset.action === 'delete') {
+        tasks = tasks.filter((currentTask) => currentTask.id !== taskId);
+    } else {
+        return;
     }
 
-    if (actionButton.dataset.action === 'delete') {
-        tasks = tasks.filter((currentTask) => currentTask.id !== taskId);  
-        saveTasks();
-        renderTasks();
-    }
+    saveTasks();
+    renderTasks();
 });
 
-/**
- * Change the visible task filter.
- */
 filterButtons.forEach((button) => {
     button.addEventListener('click', () => {
         currentFilter = button.dataset.filter;
 
         filterButtons.forEach((currentButton) => {
-            currentButton.classList.remove('active');
+            currentButton.classList.toggle(
+                'active',
+                currentButton === button
+            );
         });
 
-        button.classList.add('active');
         renderTasks();
     });
 });
 
-/**
- * Remove every completed task.
- */
 clearCompletedButton.addEventListener('click', () => {
     tasks = tasks.filter((task) => !task.completed);
     saveTasks();
     renderTasks();
 });
 
-/**
- * Filter tasks while the user types in the search field.
- */
 searchInput.addEventListener('input', () => {
     searchTerm = searchInput.value;
     renderTasks();
 });
+
+// Refresh date indicators when returning to the app.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        renderTasks();
+    }
+});
+
+// Keep overdue indicators current if the app stays open overnight.
+let lastToday = getToday();
+
+setInterval(() => {
+    const today = getToday();
+
+    if (today !== lastToday) {
+        lastToday = today;
+        renderTasks();
+    }
+}, 60000);
 
 renderTasks();
