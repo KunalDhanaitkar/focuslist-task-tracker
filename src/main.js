@@ -3,6 +3,8 @@ import '../style.css';
 const searchInput = document.querySelector('#search-input');
 const taskForm = document.querySelector('#task-form');
 const taskInput = document.querySelector('#task-input');
+const priorityInput = document.querySelector('#priority-input');
+const PRIORITIES = ['low', 'medium', 'high'];
 const taskList = document.querySelector('#task-list');
 const emptyState = document.querySelector('#empty-state');
 const remainingCount = document.querySelector('#remaining-count');
@@ -25,7 +27,18 @@ function loadTasks() {
 
         const parsedTasks = JSON.parse(savedTasks);
 
-        return Array.isArray(parsedTasks) ? parsedTasks : [];
+        if (!Array.isArray(parsedTasks)) {
+            return [];
+        }
+
+        // Tasks saved before priority support default to Medium.
+        return parsedTasks.map((task) => ({
+            ...task,
+            priority: PRIORITIES.includes(task.priority)
+                ? task.priority
+                : 'medium'
+        }));
+
     } catch (error) {
         console.error('Unable to load saved tasks:', error);
         return [];
@@ -46,11 +59,12 @@ let searchTerm = '';
 /**
  * Add a new task to the application.
  */
-function addTask(title) {
+function addTask(title, priority) {
     const newTask = {
         id: crypto.randomUUID(),
         title: title,
-        completed: false
+        completed: false,
+        priority: PRIORITIES.includes(priority) ? priority : 'medium'
     };
 
     tasks.push(newTask);
@@ -133,9 +147,26 @@ function renderTasks() {
         deleteButton.dataset.action = 'delete';
         deleteButton.textContent = 'Delete';
         deleteButton.setAttribute('aria-label', `Delete ${task.title}`);
+        
+        const prioritySelect = document.createElement('select');
+        prioritySelect.className = `task-priority priority-${task.priority}`;
+        prioritySelect.setAttribute(
+            'aria-label',
+            `Priority for ${task.title}`
+        );
+
+        PRIORITIES.forEach((priority) => {
+            const option = document.createElement('option');
+            option.value = priority;
+            option.textContent =
+                priority.charAt(0).toUpperCase() + priority.slice(1);
+            prioritySelect.append(option);
+        });
+
+        prioritySelect.value = task.priority;
 
         actions.append(editButton, deleteButton);
-        listItem.append(checkbox, taskTitle, actions);
+        listItem.append(checkbox, taskTitle, prioritySelect, actions);
         taskList.append(listItem);
     });
 
@@ -169,7 +200,7 @@ taskForm.addEventListener('submit', (event) => {
         return;
     }
 
-    addTask(title);
+    addTask(title, priorityInput.value);
 
     taskForm.reset();
     taskInput.focus();
@@ -178,25 +209,43 @@ taskForm.addEventListener('submit', (event) => {
 /**
  * Handle changes to task checkboxes.
  */
+/**
+ * Save changes to task completion or priority.
+ */
 taskList.addEventListener('change', (event) => {
-    const checkbox = event.target.closest('.task-checkbox');
+    const control = event.target;
+    const taskItem = control.closest('.task-item');
 
-    if (!checkbox) {
+    if (!taskItem) {
         return;
     }
 
-    const taskItem = checkbox.closest('.task-item');
     const task = findTask(taskItem.dataset.taskId);
 
     if (!task) {
         return;
     }
 
-    task.completed = checkbox.checked;
+    if (control.matches('.task-checkbox')) {
+        task.completed = control.checked;
+    } else if (control.matches('.task-priority')) {
+        if (!PRIORITIES.includes(control.value)) {
+            return;
+        }
 
-    // Save the changed completion status before rendering again.
+        task.priority = control.value;
+    } else {
+        return;
+    }
+
     saveTasks();
-    renderTasks();
+
+    // Keep focus on the priority dropdown when changing its value.
+    if (control.matches('.task-priority')) {
+        control.className = `task-priority priority-${task.priority}`;
+    } else {
+        renderTasks();
+    }
 });
 
 /**
