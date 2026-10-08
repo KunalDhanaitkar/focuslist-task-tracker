@@ -9,7 +9,6 @@
     >
     <title>FocusList Task Tracker</title>
 </head>
-
 <body>
     <main class="app-container">
         <header class="app-header">
@@ -22,10 +21,8 @@
 
         <section class="task-panel">
             <h2>Add a task</h2>
-
             <form id="task-form">
                 <label for="task-input">Task description</label>
-
                 <div class="form-row">
                     <input
                         id="task-input"
@@ -47,14 +44,9 @@
                             <option value="high">High</option>
                         </select>
                     </div>
-
                     <div class="option-field">
                         <label for="due-date-input">Due date (optional)</label>
-                        <input
-                            id="due-date-input"
-                            name="dueDate"
-                            type="date"
-                        >
+                        <input id="due-date-input" name="dueDate" type="date">
                     </div>
                 </div>
             </form>
@@ -63,23 +55,13 @@
         <section class="task-panel">
             <div class="toolbar">
                 <h2>Your tasks</h2>
-
                 <div class="filters" aria-label="Filter tasks">
-                    <button
-                        type="button"
-                        class="filter-button active"
-                        data-filter="all"
-                    >All</button>
-                    <button
-                        type="button"
-                        class="filter-button"
-                        data-filter="active"
-                    >Active</button>
-                    <button
-                        type="button"
-                        class="filter-button"
-                        data-filter="completed"
-                    >Completed</button>
+                    <button type="button" class="filter-button active"
+                        data-filter="all">All</button>
+                    <button type="button" class="filter-button"
+                        data-filter="active">Active</button>
+                    <button type="button" class="filter-button"
+                        data-filter="completed">Completed</button>
                 </div>
             </div>
 
@@ -94,7 +76,6 @@
             </div>
 
             <ul id="task-list" class="task-list"></ul>
-
             <div id="empty-state" class="empty-state">
                 <p>No tasks yet. Add your first task above.</p>
             </div>
@@ -105,6 +86,28 @@
                     Clear completed
                 </button>
             </footer>
+        </section>
+
+        <section class="task-panel">
+            <h2>Back up and restore</h2>
+            <p class="backup-description">
+                Export your tasks to a JSON file. Importing a backup replaces
+                your current tasks after confirmation.
+            </p>
+
+            <div class="backup-actions">
+                <button id="export-tasks" type="button">Export JSON</button>
+                <button id="import-tasks" type="button">Import JSON</button>
+                <input
+                    id="import-file"
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                >
+            </div>
+
+            <p id="backup-status" class="backup-status"
+                role="status" aria-live="polite"></p>
         </section>
     </main>
 
